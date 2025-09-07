@@ -369,19 +369,53 @@ def train_and_snapshot(cfg, snapshot_dir, checkpoint_dir):
 # -----------------------------
 
 def load_snapshots(snapshot_dir, max_files=None):
-    files = sorted([os.path.join(snapshot_dir, f) for f in os.listdir(snapshot_dir) if f.endswith('.npz')])
+    """
+    Load snapshot .npz files from `snapshot_dir`, parse metadata, and return
+    a sorted list of snapshots together with `steps` and `times` arrays.
+
+    This version sorts snapshots by their recorded `step` (metadata) so the
+    `steps` sequence is strictly increasing (required by CubicSpline). If it
+    finds duplicate or non-increasing steps it makes them strictly
+    increasing by adding a tiny epsilon to later entries.
+    """
+    files = [os.path.join(snapshot_dir, f) for f in os.listdir(snapshot_dir) if f.endswith('.npz')]
+    # collect meta for sorting
+    meta_list = []  # tuples (step, time, path)
+    for f in files:
+        try:
+            d = np.load(f, allow_pickle=True)
+            meta = eval(d['_meta'][0].tolist())
+            meta_list.append((int(meta['step']), float(meta['time']), f))
+        except Exception:
+            # skip files that can't be read or missing metadata
+            continue
+
+    # sort by step (ascending)
+    meta_list.sort(key=lambda x: x[0])
     if max_files:
-        files = files[:max_files]
+        meta_list = meta_list[:max_files]
+
     snapshots = []
     times = []
     steps = []
-    print(f"Loading {len(files)} snapshot files from {snapshot_dir}")
-    for f in tqdm(files, desc='loading_snapshots'):
+    for step, t, f in meta_list:
         d = np.load(f, allow_pickle=True)
-        meta = eval(d['_meta'][0].tolist())
-        steps.append(meta['step'])
-        times.append(meta['time'])
         snapshots.append(d)
+        steps.append(step)
+        times.append(t)
+
+    # ensure strictly increasing steps (CubicSpline requires x to be strictly
+    # increasing). If there are duplicates or a non-monotonic sequence, nudge
+    # later entries by a very small epsilon (microseconds-scale) so relative
+    # ordering is preserved but values are strictly increasing.
+    if len(steps) >= 2:
+        steps = np.array(steps, dtype=float)
+        for i in range(1, len(steps)):
+            if steps[i] <= steps[i-1]:
+                steps[i] = steps[i-1] + 1e-6 * (i + 1)
+        steps = steps.tolist()
+
+    print(f"Loaded {len(snapshots)} snapshots (sorted by step)")
     return snapshots, steps, times
 
 
