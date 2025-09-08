@@ -25,12 +25,12 @@ CACHE_DIR = "nn_cache"  # <-- caching / checkpoints / dumps
 
 VOCAB_SIZE = 4000
 BLOCK_SIZE = 512
-BATCH_SIZE = 8
+BATCH_SIZE = 48
 NUM_EPOCHS = 3
 LEARNING_RATE = 5e-4
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-log_interval = 10
+log_interval = 5
 full_dump_interval = 500
 NUM_WORKERS = os.cpu_count() or 1
 os.makedirs(CACHE_DIR, exist_ok=True)
