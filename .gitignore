@@ -1,3 +1,10 @@
 *.txt
 *.npz
 *.pt
+*.model
+*.vocab
+*.log
+*.csv
+*.json
+*.ckpt
+__pycache__/
