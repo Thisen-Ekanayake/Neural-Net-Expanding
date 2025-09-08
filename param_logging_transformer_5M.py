@@ -3,6 +3,7 @@ param_logging_transformer_5M_pretokenized.py
 
 Modified training pipeline:
  - Uses a pre-tokenized dataset in JSONL format with 512-token sequences.
+ - Pads/truncates sequences to 512 tokens.
  - Removes all SentencePiece/tokenization logic.
  - Keeps the Transformer LM (~5M params) and detailed parameter/activation logging.
 """
@@ -34,25 +35,29 @@ full_dump_interval = 500
 NUM_WORKERS = os.cpu_count() or 1
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# ----------------- Pre-tokenized dataset loader -----------------
+# ----------------- Pre-tokenized dataset loader (with padding) -----------------
 class PreTokenizedDataset(Dataset):
-    def __init__(self, jsonl_path):
+    def __init__(self, jsonl_path, block_size=512, pad_token=0):
         self.blocks = []
+        self.block_size = block_size
+        self.pad_token = pad_token
         with open(jsonl_path, 'r', encoding='utf-8') as f:
             for line in f:
                 data = json.loads(line)
-                # Each line should have "input_ids" key with 512-length list
                 ids = data['input_ids']
-                assert len(ids) == BLOCK_SIZE, f"Expected block of {BLOCK_SIZE}, got {len(ids)}"
-                tensor_block = torch.tensor(ids, dtype=torch.long)
-                self.blocks.append(tensor_block)
+                # pad if shorter
+                if len(ids) < block_size:
+                    ids = ids + [pad_token] * (block_size - len(ids))
+                elif len(ids) > block_size:
+                    ids = ids[:block_size]  # truncate if longer
+                self.blocks.append(torch.tensor(ids, dtype=torch.long))
 
     def __len__(self):
         return len(self.blocks)
 
     def __getitem__(self, idx):
         x = self.blocks[idx]
-        return x[:-1].long(), x[1:].long()  # input and target
+        return x[:-1], x[1:]  # input and target
 
 # ----------------- Transformer LM -----------------
 class SimpleTransformerLM(nn.Module):
@@ -157,7 +162,7 @@ for i, layer in enumerate(model.transformer.layers):
 
 # ----------------- Dataset and DataLoader -----------------
 print(f"Using {NUM_WORKERS} DataLoader workers.")
-train_dataset = PreTokenizedDataset(DATASET_JSONL_PATH)
+train_dataset = PreTokenizedDataset(DATASET_JSONL_PATH, block_size=BLOCK_SIZE, pad_token=0)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, drop_last=True)
 
 # ----------------- Training -----------------
