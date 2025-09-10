@@ -1,102 +1,63 @@
-#!/usr/bin/env python3
-"""
-parameter_count.py
-
-Loads a .pt checkpoint (handles common layouts), prints parameter shapes and counts,
-detects shared storages (tied parameters), reports raw vs unique parameter totals,
-and can optionally write a 'cleaned' checkpoint that removes duplicate state_dict entries.
-
-Usage:
-    python parameter_count.py --pt path/to/final.pt
-    python parameter_count.py --pt final.pt --clean_out final.cleaned.pt
-"""
-
 import torch
 import argparse
-import csv
-import json
-from collections import defaultdict
+from collections import OrderedDict
 
-def count_parameters(state_dict):
-    """
-    Counts parameters and groups them by component prefix.
-    """
+def count_parameters(pt_file):
+    checkpoint = torch.load(pt_file, map_location='cpu')
+    
+    if 'model_state' in checkpoint:
+        state_dict = checkpoint['model_state']
+    else:
+        raise ValueError("No 'model_state' key found in checkpoint.")
+    
+    # Initialize counters
     total_params = 0
-    grouped_params = defaultdict(int)
-    raw_listing = []
-
-    for name, param in state_dict.items():
-        t = torch.tensor(param) if not torch.is_tensor(param) else param
-        num_params = t.numel()
-        shape_str = str(list(t.shape))
-
-        # Raw list
-        raw_listing.append((name, shape_str, num_params))
-
-        # Group by top-level component
-        if name.startswith("tok_emb"):
-            group = "Embedding"
-        elif name.startswith("pos_emb"):
-            group = "Positional Embedding"
-        elif "attn" in name:
-            group = "Attention"
-        elif "ff" in name:
-            group = "FeedForward"
-        elif "ln" in name:
-            group = "LayerNorm"
-        elif name.startswith("head"):
-            group = "Output Head"
-        else:
-            group = "Other"
-
-        grouped_params[group] += num_params
-        total_params += num_params
-
-    return total_params, raw_listing, grouped_params
-
-
-def analyze_checkpoint(pt_file, csv_out="params.csv", json_out="params.json"):
-    checkpoint = torch.load(pt_file, map_location="cpu")
-
-    if "model_state" not in checkpoint:
-        raise ValueError("No 'model_state' found in checkpoint")
-
-    state_dict = checkpoint["model_state"]
-    total_params, raw_listing, grouped_params = count_parameters(state_dict)
-
+    arch_params = 0
+    emb_params = 0
+    head_params = 0
+    layernorm_params = 0
+    attention_params = 0
+    ff_params = 0
+    
     print("\nPer-parameter (raw listing):")
-    for name, shape, count in raw_listing:
-        print(f"{name:50s} {shape:25s} -> {count:10d}")
+    for name, t in state_dict.items():
+        num = t.numel()
+        total_params += num
 
+        # Categorize
+        lname = name.lower()
+        if 'emb' in lname:
+            emb_params += num
+        elif 'head' in lname:
+            head_params += num
+        elif 'ln' in lname:
+            layernorm_params += num
+            arch_params += num
+        elif 'attn' in lname:
+            attention_params += num
+            arch_params += num
+        elif 'ff' in lname or 'mlp' in lname:
+            ff_params += num
+            arch_params += num
+        else:
+            arch_params += num  # default to architecture
+
+        print(f"{name:50s} {str(list(t.shape)):20s} -> {num:10d}")
+    
     print("\nLayer-wise totals:")
-    for group, count in grouped_params.items():
-        print(f"{group:20s}: {count}")
-
-    print(f"\nTotal parameters: {total_params}\n")
-
-    # Save CSV
-    with open(csv_out, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["Name", "Shape", "Count"])
-        writer.writerows(raw_listing)
-
-    # Save JSON
-    with open(json_out, "w") as f:
-        json.dump(
-            {"layer_totals": grouped_params, "total_params": total_params},
-            f,
-            indent=4,
-        )
-
-    print(f"Saved detailed CSV to {csv_out}")
-    print(f"Saved summary JSON to {json_out}")
-
+    print(f"Positional Embedding: {emb_params if 'pos_emb' in state_dict else 0}")
+    print(f"Embedding           : {emb_params}")
+    print(f"LayerNorm           : {layernorm_params}")
+    print(f"Attention           : {attention_params}")
+    print(f"FeedForward         : {ff_params}")
+    print(f"Output Head         : {head_params}")
+    
+    print(f"\nTotal parameters (including embeddings & head) : {total_params}")
+    print(f"Architecture-only parameters (transformer layers only): {arch_params}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pt", type=str, required=True, help="Path to checkpoint .pt file")
-    parser.add_argument("--csv_out", type=str, default="params.csv", help="CSV output file")
-    parser.add_argument("--json_out", type=str, default="params.json", help="JSON output file")
+    parser.add_argument('--pt', type=str, required=True, help="Path to .pt checkpoint")
     args = parser.parse_args()
-
-    analyze_checkpoint(args.pt, csv_out=args.csv_out, json_out=args.json_out)
+    
+    count_parameters(args.pt)
