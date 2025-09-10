@@ -1,4 +1,4 @@
-import torch
+"""import torch
 import argparse
 from collections import OrderedDict
 
@@ -61,3 +61,30 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     count_parameters(args.pt)
+"""
+"""
+import torch
+
+pt_file = "checkpoint/expanded.pt"  # change to your path
+checkpoint = torch.load(pt_file, map_location="cpu")
+
+print("Type:", type(checkpoint))
+
+if isinstance(checkpoint, dict):
+    print("Keys:", checkpoint.keys())
+    for k, v in checkpoint.items():
+        print(f"{k}: {type(v)}")"""
+
+import torch
+
+ckpt = torch.load("checkpoint/expanded.pt", map_location="cpu")
+
+# If the checkpoint is wrapped in a dict with 'model_state', use that
+if 'model_state' in ckpt:
+    state_dict = ckpt['model_state']
+else:
+    # Otherwise assume the checkpoint itself is the state_dict
+    state_dict = ckpt
+
+total_params = sum(t.numel() for t in state_dict.values())
+print(f"Total parameters: {total_params}")
