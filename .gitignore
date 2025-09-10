@@ -7,4 +7,8 @@
 *.csv
 *.json
 *.ckpt
+*.jsonl
+*.png
+
+splitting-to-tokens.py
 __pycache__/
