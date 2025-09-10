@@ -1,11 +1,11 @@
 """
-param_logging_transformer_5M_pretokenized.py
+param_logging_transformer_5M_pretokenized_progress.py
 
 Modified training pipeline:
  - Uses a pre-tokenized dataset in JSONL format with 512-token sequences.
  - Pads/truncates sequences to 512 tokens.
  - Removes all SentencePiece/tokenization logic.
- - Keeps the Transformer LM (~5M params) and detailed parameter/activation logging.
+ - Adds tqdm progress bars with ETA for dataset loading and training.
 """
 
 import os
@@ -17,6 +17,7 @@ import json
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
 # --- PLACEHOLDERS ---
 DATASET_JSONL_PATH = "tokenized_dataset.jsonl"  # <-- your pre-tokenized JSONL
@@ -35,21 +36,23 @@ full_dump_interval = 500
 NUM_WORKERS = os.cpu_count() or 1
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# ----------------- Pre-tokenized dataset loader (with padding) -----------------
+# ----------------- Pre-tokenized dataset loader with progress bar -----------------
 class PreTokenizedDataset(Dataset):
     def __init__(self, jsonl_path, block_size=512, pad_token=0):
         self.blocks = []
         self.block_size = block_size
         self.pad_token = pad_token
+        # Count lines for progress bar
         with open(jsonl_path, 'r', encoding='utf-8') as f:
-            for line in f:
+            total_lines = sum(1 for _ in f)
+        with open(jsonl_path, 'r', encoding='utf-8') as f:
+            for line in tqdm(f, total=total_lines, desc="Loading dataset", unit="lines"):
                 data = json.loads(line)
                 ids = data['input_ids']
-                # pad if shorter
                 if len(ids) < block_size:
                     ids = ids + [pad_token] * (block_size - len(ids))
                 elif len(ids) > block_size:
-                    ids = ids[:block_size]  # truncate if longer
+                    ids = ids[:block_size]
                 self.blocks.append(torch.tensor(ids, dtype=torch.long))
 
     def __len__(self):
@@ -253,24 +256,33 @@ def log_param_stats(step, epoch):
         import numpy as np
         np.savez_compressed(dump_path, **dump_dict)
 
-# ----------------- Training loop -----------------
+# ----------------- Training loop with tqdm -----------------
 model.train()
+steps_per_epoch = len(train_loader)
 for epoch in range(1, NUM_EPOCHS + 1):
-    for batch in train_loader:
-        input_ids, target_ids = batch
-        input_ids = input_ids.to(DEVICE)
-        target_ids = target_ids.to(DEVICE)
+    print(f"Epoch {epoch}/{NUM_EPOCHS}")
+    epoch_start_time = time.time()
+    with tqdm(train_loader, desc="Training", unit="batch") as tepoch:
+        for batch_idx, batch in enumerate(tepoch, 1):
+            input_ids, target_ids = batch
+            input_ids = input_ids.to(DEVICE)
+            target_ids = target_ids.to(DEVICE)
 
-        optimizer.zero_grad()
-        activation_stats.clear()
-        logits = model(input_ids)
-        loss = loss_fn(logits.view(-1, logits.size(-1)), target_ids.view(-1))
-        loss.backward()
-        optimizer.step()
+            optimizer.zero_grad()
+            activation_stats.clear()
+            logits = model(input_ids)
+            loss = loss_fn(logits.view(-1, logits.size(-1)), target_ids.view(-1))
+            loss.backward()
+            optimizer.step()
 
-        global_step += 1
-        if global_step % log_interval == 0:
-            print(f"step={global_step}, epoch={epoch}, loss={loss.item():.4f}")
-            log_param_stats(global_step, epoch)
+            global_step += 1
+
+            if global_step % log_interval == 0:
+                log_param_stats(global_step, epoch)
+                # ETA calculation per epoch
+                elapsed = time.time() - epoch_start_time
+                remaining_batches = steps_per_epoch - batch_idx
+                eta = remaining_batches * (elapsed / batch_idx)
+                tepoch.set_postfix(loss=loss.item(), step=global_step, eta=f"{eta/60:.1f} min")
 
 print("Training loop completed. CSV stats at:", CSV_PATH)
