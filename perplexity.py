@@ -7,8 +7,8 @@ from torch.utils.data import Dataset, DataLoader
 # -----------------------------
 # CONFIG
 # -----------------------------
-MODEL_PATH = "checkpoint/final.pt"
-DATASET_PATH = "tokenized_yt_dataset.jsonl"  # JSONL, each line: {"input_ids": [...]}
+MODEL_PATH = "checkpoint/expanded.pt"
+DATASET_PATH = "tokenized_dataset.jsonl"  # JSONL, each line: {"input_ids": [...]}
 BATCH_SIZE = 16
 SEQ_LEN = 512
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
