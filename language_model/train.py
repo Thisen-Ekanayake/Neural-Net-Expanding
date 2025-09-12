@@ -272,7 +272,7 @@ def main():
     print(f"Script started at {datetime.now()}")
 
     model_config_path = "model-config.json"
-    data_file = "../100M_dataset.jsonl"
+    data_file = "../200M_dataset.jsonl"
     run_name = "sinhala-gpt-v1"
 
     # Load model config and dataset
@@ -288,7 +288,7 @@ def main():
         output_dir="checkpoints",
         overwrite_output_dir=True,
         num_train_epochs=6,
-        per_device_train_batch_size=8,
+        per_device_train_batch_size=32,
         gradient_accumulation_steps=2,
         logging_dir="logs",
         logging_steps=500,
