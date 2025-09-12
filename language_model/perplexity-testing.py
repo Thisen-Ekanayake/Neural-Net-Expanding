@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from dataset import SinhalaTokenDataset  # reuse your dataset class
 from collator import CustomDataCollator  # reuse your collator
+from tqdm import tqdm  # <-- import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -11,7 +12,7 @@ model = GPT2LMHeadModel.from_pretrained("final-model").to(device)
 model.eval()
 
 # Load test dataset
-test_dataset = SinhalaTokenDataset("")  # 500K test set
+test_dataset = SinhalaTokenDataset("../200M_dataset.jsonl")  # 500K test set
 collator = CustomDataCollator(pad_token_id=0)
 loader = DataLoader(test_dataset, batch_size=4, shuffle=False, collate_fn=collator)
 
@@ -19,7 +20,7 @@ total_loss = 0.0
 total_tokens = 0
 
 with torch.no_grad():
-    for batch in loader:
+    for batch in tqdm(loader, desc="Evaluating", unit="batch"):  # <-- add tqdm here
         input_ids = batch["input_ids"].to(device)
         attention_mask = batch["attention_mask"].to(device)
 
