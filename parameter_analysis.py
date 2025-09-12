@@ -99,11 +99,11 @@ def calculate_transformer_parameters(config):
 
 # Given configuration
 config = {
-    "vocab_size": 32000,
-    "n_positions": 1024,
-    "n_embd": 768,
-    "n_layer": 8,
-    "n_head": 12,
+    "vocab_size": 4000,
+    "n_positions": 512,
+    "n_embd": 384,
+    "n_layer": 2,
+    "n_head": 6,
     "activation_function": "gelu_new",
     "resid_pdrop": 0.1,
     "embd_pdrop": 0.1,
