@@ -4,10 +4,10 @@ import json
 input_file = "tokenized_dataset.jsonl"
 
 # Output file for the smaller dataset
-output_file = "100M_dataset.jsonl"
+output_file = "200M_dataset.jsonl"
 
 # Target number of tokens
-target_tokens = 100_000_000
+target_tokens = 200_000_000
 
 current_tokens = 0
 
