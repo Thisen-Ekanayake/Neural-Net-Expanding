@@ -23,12 +23,36 @@ from logger import Logger
 class CustomPrint:
     def __init__(self, logger):
         self.logger = logger
+        self.original_print = builtins.__dict__.get('print', print)
+        self.is_progress_bar = False
+        self.last_progress_message = ""
     
     def __call__(self, *args, **kwargs):
-        # Handle the 'end' parameter by converting it to part of the message
-        end_char = kwargs.get('end', '\n')
-        message = ' '.join(str(arg) for arg in args) + end_char
-        self.logger.write(message)
+        # Check if this is a progress bar message (contains carriage return or specific patterns)
+        message = ' '.join(str(arg) for arg in args)
+        
+        # Detect progress bar patterns
+        is_carriage_return = '\r' in message
+        is_progress_pattern = any(pattern in message for pattern in 
+                                 ['%|', 'it/s', 'ETA:', 'steps/s', 'epoch', 'Step'])
+        
+        if is_carriage_return or is_progress_pattern:
+            # This is a progress bar message
+            self.is_progress_bar = True
+            # Only log progress updates if they're significantly different
+            clean_message = message.replace('\r', '').strip()
+            if clean_message and clean_message != self.last_progress_message:
+                self.logger.write(f"Progress: {clean_message}")
+                self.last_progress_message = clean_message
+            # Still show the progress bar in console using original print
+            self.original_print(*args, **kwargs)
+        else:
+            # Regular message - log it and print to console
+            self.is_progress_bar = False
+            end_char = kwargs.get('end', '\n')
+            full_message = message + end_char
+            self.logger.write(full_message)
+            self.original_print(*args, **kwargs)
 
 log = Logger(log_dir="logs/train_run")
 builtins.print = CustomPrint(log)
@@ -168,7 +192,7 @@ class TimingTrainer(Trainer):
         # Forward pass
         outputs = super().training_step(model, inputs, num_items_in_batch)
         
-        # Log gradients after backward pass
+        # Log gradients after backward pass (but less frequently to avoid slowing down training)
         if self.state.global_step % self.param_logger.log_interval == 0:
             self.param_logger.log_parameters(
                 model, self.state.global_step, 
@@ -176,7 +200,9 @@ class TimingTrainer(Trainer):
             )
         
         step_time = time.time() - self.step_start_time
-        print(f"[Step {self.state.global_step}] Training step took {step_time:.3f}s")
+        # Only log step time occasionally to avoid flooding the console
+        if self.state.global_step % 50 == 0:
+            print(f"[Step {self.state.global_step}] Training step took {step_time:.3f}s")
         self.step_start_time = time.time()
         
         return outputs
@@ -278,6 +304,8 @@ def main():
         # Additional settings for better logging
         logging_first_step=True,
         logging_nan_inf_filter=False,  # Don't filter out nan/inf values
+        # Disable the default progress bar since we're handling it manually
+        disable_tqdm=False,  # Keep tqdm enabled for proper progress display
     )
 
     # Initialize wandb with more detailed configuration
