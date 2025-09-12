@@ -62,10 +62,10 @@ if __name__ == "__main__":
     
     count_parameters(args.pt)
 """
-"""
+
 import torch
 
-pt_file = "checkpoint/expanded.pt"  # change to your path
+pt_file = "checkpoint/final.pt"  # change to your path
 checkpoint = torch.load(pt_file, map_location="cpu")
 
 print("Type:", type(checkpoint))
@@ -73,9 +73,9 @@ print("Type:", type(checkpoint))
 if isinstance(checkpoint, dict):
     print("Keys:", checkpoint.keys())
     for k, v in checkpoint.items():
-        print(f"{k}: {type(v)}")"""
+        print(f"{k}: {type(v)}")
 
-import torch
+"""import torch
 
 ckpt = torch.load("checkpoint/expanded.pt", map_location="cpu")
 
@@ -87,4 +87,4 @@ else:
     state_dict = ckpt
 
 total_params = sum(t.numel() for t in state_dict.values())
-print(f"Total parameters: {total_params}")
+print(f"Total parameters: {total_params}")"""
