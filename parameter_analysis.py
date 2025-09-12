@@ -99,19 +99,19 @@ def calculate_transformer_parameters(config):
 
 # Given configuration
 config = {
-    "vocab_size": 4000,
-    "n_positions": 512,
-    "n_embd": 384,
-    "n_layer": 2,
-    "n_head": 6,
-    "activation_function": "gelu_new",
-    "resid_pdrop": 0.1,
-    "embd_pdrop": 0.1,
-    "attn_pdrop": 0.1,
-    "layer_norm_epsilon": 1e-5,
-    "initializer_range": 0.02,
-    "bos_token_id": 1,
-    "eos_token_id": 2
+  "vocab_size": 4000,
+  "n_positions": 512,
+  "n_embd": 384,
+  "n_layer": 4,
+  "n_head": 6,
+  "activation_function": "gelu_new",
+  "resid_pdrop": 0.1,
+  "embd_pdrop": 0.1,
+  "attn_pdrop": 0.1,
+  "layer_norm_epsilon": 1e-5,
+  "initializer_range": 0.02,
+  "bos_token_id": 1,
+  "eos_token_id": 2
 }
 
 # Calculate parameters
