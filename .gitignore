@@ -9,6 +9,9 @@
 *.ckpt
 *.jsonl
 *.png
+*.safetensors
+*.bin
+*.h5
 
 splitting-to-tokens.py
 __pycache__/
