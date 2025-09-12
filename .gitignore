@@ -12,3 +12,7 @@
 
 splitting-to-tokens.py
 __pycache__/
+checkpoints/
+logs/
+parameter_logs/
+wandb/
