@@ -26,7 +26,9 @@ class TinyNN(nn.Module):
         self.fc2 = nn.Linear(4, 1)   # 4 hidden -> 1 output
     
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
+        # first used ReLU but it didn't work well for XOR
+        # changed to tanh and it worked better
+        x = torch.tanh(self.fc1(x)) # Activation function
         x = torch.sigmoid(self.fc2(x))
         return x
 
