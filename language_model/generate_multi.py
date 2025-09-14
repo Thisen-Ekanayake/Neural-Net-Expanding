@@ -4,7 +4,7 @@ import sentencepiece as spm
 
 PROMPT_FILE = "prompts.txt"
 OUTPUT_FILE = "generated-multi.txt"
-TOKENIZER_MODEL = ""
+TOKENIZER_MODEL = "../unigram_4000_0.9995.model"
 MODEL_PATH = "final-model"
 
 # --- Load Device ---
