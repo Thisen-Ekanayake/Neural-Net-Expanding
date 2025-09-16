@@ -14,7 +14,32 @@ X = [[0,0],[0,1],[1,0],[1,1]]
 
 so y = [[0],[1],[1],[0]]
 therefore the model should learn to predict y from X.
+
+this model has 2 layers:
+- first layer: 2 inputs to 4 hidden neurons with tanh activation
+- second layer: 4 hidden neurons to 1 output with sigmoid activation
+
+in these dense models (fully connected layers), each neuron in one layer is connected to every neuron in the next layer.
+and every input is connected to every neuron in the first layer.
+
+Parameters = (in_features + 1) x out_features
+- in_features = number of inputs to the layer (weights)
+- out_features = number of neurons in the layer
+- +1 is for the bias term
+
+For first layer:
+- in_features = 2 (2 inputs)
+- out_features = 4 (4 hidden neurons)
+- Parameters = (2 + 1) x 4 = 12
+
+For second layer:
+- in_features = 4 (4 hidden neurons)
+- out_features = 1 (1 output)
+- Parameters = (4 + 1) x 1 = 5
+
+- Total Parameters = 12 + 5 = 17
 """
+
 X = torch.tensor([[0,0],[0,1],[1,0],[1,1]], dtype=torch.float32)
 y = torch.tensor([[0],[1],[1],[0]], dtype=torch.float32)
 
