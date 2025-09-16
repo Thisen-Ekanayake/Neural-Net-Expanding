@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import pandas as pd
 
 # Tiny dataset: XOR problem
+
 """
 in here X is the input tensor and y is the target tensor.
 X = [[0,0],[0,1],[1,0],[1,1]]
@@ -51,15 +53,17 @@ class TinyNN(nn.Module):
         self.fc2 = nn.Linear(4, 1)   # 4 hidden -> 1 output
     
     def forward(self, x):
-        # first used ReLU but it didn't work well for XOR
-        # changed to tanh and it worked better
-        x = torch.tanh(self.fc1(x)) # Activation function
+        x = torch.tanh(self.fc1(x))
         x = torch.sigmoid(self.fc2(x))
         return x
 
 model = TinyNN()
-criterion = nn.BCELoss()            # Binary classification
+criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+# Storage for logs
+raw_logs = []   # raw values + gradients
+stat_logs = []  # mean, std, min, max
 
 # Training loop
 for epoch in range(1000):
@@ -69,8 +73,37 @@ for epoch in range(1000):
     loss.backward()
     optimizer.step()
     
+    # Log every 100 epochs
     if epoch % 100 == 0:
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
+
+        raw_record = {"epoch": epoch}
+        for name, param in model.named_parameters():
+            # Flatten parameters and gradients
+            param_values = param.data.view(-1).tolist()
+            grad_values = param.grad.view(-1).tolist()
+            
+            # Add each individual value
+            for i, val in enumerate(param_values):
+                raw_record[f"{name}_{i}"] = val
+            for i, gval in enumerate(grad_values):
+                raw_record[f"{name}.grad_{i}"] = gval
+
+            # Also record stats
+            stat_logs.append({
+                "epoch": epoch,
+                "param_name": name,
+                "mean": param.data.mean().item(),
+                "std": param.data.std().item(),
+                "min": param.data.min().item(),
+                "max": param.data.max().item()
+            })
+
+        raw_logs.append(raw_record)
+
+# Save to CSV
+pd.DataFrame(raw_logs).to_csv("mlp_params_raw.csv", index=False)
+pd.DataFrame(stat_logs).to_csv("mlp_params_stats.csv", index=False)
 
 # Test
 with torch.no_grad():
