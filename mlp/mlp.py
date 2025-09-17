@@ -74,7 +74,7 @@ for epoch in range(1000):
     optimizer.step()
     
     # Log every 100 epochs
-    if epoch % 100 == 0:
+    if epoch % 50 == 0:
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}")
 
         raw_record = {"epoch": epoch}
@@ -102,8 +102,8 @@ for epoch in range(1000):
         raw_logs.append(raw_record)
 
 # Save to CSV
-pd.DataFrame(raw_logs).to_csv("mlp_params_raw.csv", index=False)
-pd.DataFrame(stat_logs).to_csv("mlp_params_stats.csv", index=False)
+pd.DataFrame(raw_logs).to_csv("mlp_params_raw_50_epoch.csv", index=False)
+pd.DataFrame(stat_logs).to_csv("mlp_params_stats_50_epoch.csv", index=False)
 
 # Test
 with torch.no_grad():
