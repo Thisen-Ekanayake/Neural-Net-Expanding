@@ -12,6 +12,7 @@
 *.safetensors
 *.bin
 *.h5
+*.pdf
 
 splitting-to-tokens.py
 __pycache__/
@@ -19,3 +20,5 @@ checkpoints/
 logs/
 parameter_logs/
 wandb/
+Dataset_binary/
+docs/
